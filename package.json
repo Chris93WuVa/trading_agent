@@ -1,0 +1,14 @@
+{
+  "name": "trading-agent-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GitHub Pages compatible trading dashboard for stocks, ETFs, and crypto research.",
+  "scripts": {
+    "generate:data": "node scripts/generate-snapshot.mjs",
+    "test": "node tests/validate-dashboard.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

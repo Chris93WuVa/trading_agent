@@ -114,6 +114,107 @@ const scoreBar = (score) => `<div class="score-bar" aria-label="Score ${score}">
 
 const signalBadge = (signal) => `<span class="badge ${signal}">${signal}</span>`;
 
+const average = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+
+const standardDeviation = (values) => {
+  const mean = average(values);
+  return Math.sqrt(average(values.map((value) => (value - mean) ** 2)));
+};
+
+const movingAverageSeries = (values, windowSize) => values.map((_, index) => {
+  const start = Math.max(0, index - windowSize + 1);
+  return average(values.slice(start, index + 1));
+});
+
+const pointSeries = (values, width, height, padding, domainValues = values) => {
+  const min = Math.min(...domainValues);
+  const max = Math.max(...domainValues);
+  const range = max - min || 1;
+  return values.map((value, index) => {
+    const x = padding + (index / (values.length - 1 || 1)) * (width - padding * 2);
+    const y = height - padding - ((value - min) / range) * (height - padding * 2);
+    return { value, x, y };
+  });
+};
+
+const pathFromPoints = (points) => points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
+
+const estimateRsi = (values) => {
+  const changes = values.slice(1).map((value, index) => value - values[index]);
+  const gains = changes.map((change) => Math.max(change, 0));
+  const losses = changes.map((change) => Math.max(-change, 0));
+  const averageLoss = average(losses) || 0.0001;
+  const rs = average(gains) / averageLoss;
+  return Math.round(100 - (100 / (1 + rs)));
+};
+
+const analyzeAsset = (asset) => {
+  const values = asset.spark;
+  const support = Math.min(...values);
+  const resistance = Math.max(...values);
+  const shortMa = average(values.slice(-3));
+  const longMa = average(values);
+  const momentumPct = ((values.at(-1) - values[0]) / values[0]) * 100;
+  const returns = values.slice(1).map((value, index) => ((value - values[index]) / values[index]) * 100);
+  const volatility = standardDeviation(returns);
+  const rsi = estimateRsi(values);
+  const riskReward = Math.max((asset.takeProfit - asset.price) / Math.max(asset.price - asset.stopLoss, 0.0001), 0);
+  const trend = shortMa > longMa && momentumPct > 0 ? 'Bullish trend' : shortMa < longMa && momentumPct < 0 ? 'Bearish trend' : 'Sideways / mixed trend';
+  const setupQuality = riskReward >= 1.5 && rsi < 70 ? 'Favorable setup quality' : rsi >= 70 ? 'Momentum extended' : 'Needs confirmation';
+
+  return { support, resistance, shortMa, longMa, momentumPct, volatility, rsi, riskReward, trend, setupQuality };
+};
+
+const technicalChart = (asset, analysis) => {
+  const width = 760;
+  const height = 360;
+  const padding = 48;
+  const pricePoints = pointSeries(asset.spark, width, height, padding, asset.spark);
+  const maPoints = pointSeries(movingAverageSeries(asset.spark, 3), width, height, padding, asset.spark);
+  const supportY = pointSeries([analysis.support], width, height, padding, asset.spark)[0].y;
+  const resistanceY = pointSeries([analysis.resistance], width, height, padding, asset.spark)[0].y;
+  const lastPoint = pricePoints.at(-1);
+
+  return `
+    <div class="chart-toolbar" aria-label="Chart analysis controls">
+      <div class="segmented-control" aria-label="Timeframe selector">
+        <button class="active" type="button">1D</button>
+        <button type="button">1W</button>
+        <button type="button">1M</button>
+        <button type="button">6M</button>
+      </div>
+      <div class="indicator-pills" aria-label="Enabled indicators">
+        <span>MA(3)</span>
+        <span>Support / resistance</span>
+        <span>RSI estimate</span>
+        <span>Risk / reward</span>
+      </div>
+    </div>
+    <svg class="analysis-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Professional technical chart for ${asset.symbol}">
+      <defs>
+        <linearGradient id="chart-fill-${asset.symbol}" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="rgba(101, 169, 255, 0.36)" />
+          <stop offset="100%" stop-color="rgba(101, 169, 255, 0)" />
+        </linearGradient>
+      </defs>
+      <g class="chart-grid">
+        <line x1="${padding}" x2="${width - padding}" y1="${padding}" y2="${padding}" />
+        <line x1="${padding}" x2="${width - padding}" y1="${height / 2}" y2="${height / 2}" />
+        <line x1="${padding}" x2="${width - padding}" y1="${height - padding}" y2="${height - padding}" />
+      </g>
+      <path class="chart-area" d="${pathFromPoints(pricePoints)} L ${width - padding} ${height - padding} L ${padding} ${height - padding} Z" fill="url(#chart-fill-${asset.symbol})" />
+      <path class="price-line" d="${pathFromPoints(pricePoints)}" />
+      <path class="ma-line" d="${pathFromPoints(maPoints)}" />
+      <line class="resistance-line" x1="${padding}" x2="${width - padding}" y1="${resistanceY}" y2="${resistanceY}" />
+      <line class="support-line" x1="${padding}" x2="${width - padding}" y1="${supportY}" y2="${supportY}" />
+      <circle class="last-price-dot" cx="${lastPoint.x}" cy="${lastPoint.y}" r="6" />
+      <text x="${padding}" y="${Math.max(resistanceY - 8, 16)}" class="chart-label">Resistance ${currency.format(analysis.resistance)}</text>
+      <text x="${padding}" y="${Math.min(supportY + 18, height - 8)}" class="chart-label">Support ${currency.format(analysis.support)}</text>
+      <text x="${width - padding - 145}" y="${lastPoint.y - 10}" class="chart-label">Last ${currency.format(asset.price)}</text>
+    </svg>
+  `;
+};
+
 const assetBySymbol = (symbol) => snapshot.assets.find((asset) => asset.symbol === symbol);
 
 const setSelectedAsset = (symbol) => {
@@ -263,12 +364,13 @@ const renderAssetDetail = () => {
   const totalScore = scoreAsset(asset);
   const signal = recommendationForScore(totalScore);
   getElement('asset-heading').textContent = `${asset.symbol} · ${asset.name}`;
+  const analysis = analyzeAsset(asset);
   getElement('asset-chart').innerHTML = `
     <div class="panel-header">
-      <div><p class="eyebrow">Price trend</p><h2>${currency.format(asset.price)} <span class="${classForChange(asset.changePct)}">${formatChange(asset.changePct)}</span></h2></div>
+      <div><p class="eyebrow">Professional technical analysis</p><h2>${currency.format(asset.price)} <span class="${classForChange(asset.changePct)}">${formatChange(asset.changePct)}</span></h2></div>
       ${signalBadge(signal)}
     </div>
-    ${sparkline(asset.spark, asset.changePct >= 0 ? 'var(--green)' : 'var(--red)')}
+    ${technicalChart(asset, analysis)}
   `;
 
   const scoreKeys = asset.type === 'crypto'
@@ -287,9 +389,21 @@ const renderAssetDetail = () => {
     <p class="eyebrow">Signal explanation</p>
     <h3>${signal} · ${totalScore}/100 · ${asset.confidence}% confidence</h3>
     <p>${asset.explanation}</p>
+    <div class="analysis-stack">
+      <strong>Chart analysis</strong>
+      <p>${analysis.trend} · ${analysis.setupQuality}</p>
+      <dl class="analysis-metrics">
+        <div><dt>Support</dt><dd>${currency.format(analysis.support)}</dd></div>
+        <div><dt>Resistance</dt><dd>${currency.format(analysis.resistance)}</dd></div>
+        <div><dt>MA short / long</dt><dd>${currency.format(analysis.shortMa)} / ${currency.format(analysis.longMa)}</dd></div>
+        <div><dt>RSI estimate</dt><dd>${analysis.rsi}</dd></div>
+        <div><dt>Momentum</dt><dd class="${classForChange(analysis.momentumPct)}">${formatChange(analysis.momentumPct)}</dd></div>
+        <div><dt>Volatility</dt><dd>${analysis.volatility.toFixed(2)}%</dd></div>
+      </dl>
+    </div>
     <div>
       <strong>Risk tools</strong>
-      <p>Stop-loss reference: ${currency.format(asset.stopLoss)}<br>Take-profit reference: ${currency.format(asset.takeProfit)}</p>
+      <p>Stop-loss reference: ${currency.format(asset.stopLoss)}<br>Take-profit reference: ${currency.format(asset.takeProfit)}<br>Risk/reward: ${analysis.riskReward.toFixed(2)}x</p>
     </div>
     <div>
       <strong>Data context</strong>
@@ -306,12 +420,12 @@ const loadPortfolio = () => {
 const savePortfolio = () => localStorage.setItem('trading-agent-portfolio', JSON.stringify(portfolio));
 
 const renderPortfolio = () => {
-  const rows = portfolio.map((position) => {
+  const rows = portfolio.map((position, index) => {
     const asset = assetBySymbol(position.symbol.toUpperCase());
     const price = asset?.price ?? 0;
     const value = position.quantity * price;
     const cost = position.quantity * position.costBasis;
-    return { ...position, asset, value, pnl: value - cost };
+    return { ...position, index, asset, value, pnl: value - cost };
   });
   const totalValue = rows.reduce((sum, row) => sum + row.value, 0);
   const totalPnl = rows.reduce((sum, row) => sum + row.pnl, 0);
@@ -323,6 +437,7 @@ const renderPortfolio = () => {
       <td>${currency.format(row.costBasis)}</td>
       <td>${currency.format(row.value)}</td>
       <td class="${classForChange(row.pnl)}">${currency.format(row.pnl)}</td>
+      <td><button class="danger-button" type="button" data-delete-position="${row.index}" aria-label="Delete ${row.symbol} position">Delete</button></td>
     </tr>
   `).join('');
 
@@ -382,6 +497,14 @@ const bindEvents = () => {
   getElement('refresh-crypto').addEventListener('click', () => refreshCryptoPrices());
 
   document.body.addEventListener('click', (event) => {
+    const deleteButton = event.target.closest('[data-delete-position]');
+    if (deleteButton) {
+      portfolio.splice(Number(deleteButton.dataset.deletePosition), 1);
+      savePortfolio();
+      renderPortfolio();
+      return;
+    }
+
     const row = event.target.closest('[data-symbol]');
     if (row?.dataset.symbol) setSelectedAsset(row.dataset.symbol);
   });

@@ -10,10 +10,10 @@ The repository now contains a static, GitHub Pages-compatible dashboard implemen
 - Overview page with market cards, top signals, and market-regime summary.
 - Stocks & ETFs screener with Buy / Hold / Sell analytical signals.
 - Crypto screener with price, liquidity, derivatives, and selected on-chain score placeholders.
-- Asset detail page with sparkline chart, score breakdown, explanation, stop-loss, and take-profit references.
+- Asset detail page with professional technical chart analysis, score breakdown, explanation, stop-loss, and take-profit references.
 - Recommendations page grouped by Buy, Hold, and Sell.
-- Manual portfolio tracker with local browser storage and CSV import support.
-- Settings page for scoring-weight visibility.
+- Manual portfolio tracker with local browser storage, CSV import support, and delete actions for custom positions.
+- Settings page for scoring-weight visibility and professionalization roadmap.
 - Daily snapshot generation script and GitHub Pages deployment workflow.
 
 ## Access protection

@@ -16,6 +16,10 @@ The repository now contains a static, GitHub Pages-compatible dashboard implemen
 - Settings page for scoring-weight visibility.
 - Daily snapshot generation script and GitHub Pages deployment workflow.
 
+## Access protection
+
+The static GitHub Pages dashboard displays a client-side password gate before loading dashboard data. The configured dashboard password is `stitch32`. Because GitHub Pages serves static public files, this is a casual-access barrier and not a replacement for server-side authentication.
+
 ## Run locally
 
 Because the app fetches `data/market_snapshot.json`, serve the repository with a local static server instead of opening `index.html` directly:

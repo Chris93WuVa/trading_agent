@@ -11,7 +11,22 @@
     <link rel="stylesheet" href="src/styles.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <section class="auth-gate" id="auth-gate" aria-labelledby="auth-title">
+      <form class="auth-card" id="auth-form">
+        <span class="brand-mark">TA</span>
+        <p class="eyebrow">Protected research dashboard</p>
+        <h1 id="auth-title">Enter dashboard password</h1>
+        <p>GitHub Pages is public, so this client-side gate limits casual access before the dashboard is displayed.</p>
+        <label class="auth-field">
+          <span>Password</span>
+          <input id="auth-password" type="password" autocomplete="current-password" required autofocus />
+        </label>
+        <button type="submit">Unlock dashboard</button>
+        <p class="auth-error" id="auth-error" role="alert" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <div class="app-shell is-locked" id="app-shell" aria-hidden="true">
       <aside class="sidebar" aria-label="Dashboard navigation">
         <div class="brand">
           <span class="brand-mark">TA</span>

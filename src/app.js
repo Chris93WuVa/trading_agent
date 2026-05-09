@@ -1,3 +1,45 @@
+const passwordHash = 'c7dfc928bbaa76025694a02a78d57b310f67a4660f3f300e712d310c2f17e6d5';
+
+const hashText = async (text) => {
+  const encoded = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest('SHA-256', encoded);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+};
+
+const unlockDashboard = () => {
+  document.getElementById('auth-gate').classList.add('is-unlocked');
+  const appShell = document.getElementById('app-shell');
+  appShell.classList.remove('is-locked');
+  appShell.removeAttribute('aria-hidden');
+};
+
+const requireDashboardPassword = () => new Promise((resolve) => {
+  if (sessionStorage.getItem('trading-agent-authenticated') === 'true') {
+    unlockDashboard();
+    resolve();
+    return;
+  }
+
+  const form = document.getElementById('auth-form');
+  const passwordInput = document.getElementById('auth-password');
+  const error = document.getElementById('auth-error');
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const attemptedHash = await hashText(passwordInput.value);
+    if (attemptedHash === passwordHash) {
+      sessionStorage.setItem('trading-agent-authenticated', 'true');
+      unlockDashboard();
+      resolve();
+      return;
+    }
+
+    error.textContent = 'Incorrect password. Please try again.';
+    passwordInput.value = '';
+    passwordInput.focus();
+  });
+});
+
 const stockWeights = {
   technicalScore: 35,
   fundamentalScore: 20,
@@ -386,6 +428,7 @@ const renderAll = () => {
 };
 
 const init = async () => {
+  await requireDashboardPassword();
   const response = await fetch('data/market_snapshot.json');
   snapshot = await response.json();
   loadPortfolio();

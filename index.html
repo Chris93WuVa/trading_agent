@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A GitHub Pages trading dashboard for stocks, ETFs, crypto, recommendations, and manual portfolio research."
+    />
+    <title>Trading Agent Dashboard</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <section class="auth-gate" id="auth-gate" aria-labelledby="auth-title">
+      <form class="auth-card" id="auth-form">
+        <span class="brand-mark">TA</span>
+        <p class="eyebrow">Protected research dashboard</p>
+        <h1 id="auth-title">Enter dashboard password</h1>
+        <p>GitHub Pages is public, so this client-side gate limits casual access before the dashboard is displayed.</p>
+        <label class="auth-field">
+          <span>Password</span>
+          <input id="auth-password" type="password" autocomplete="current-password" required autofocus />
+        </label>
+        <button type="submit">Unlock dashboard</button>
+        <p class="auth-error" id="auth-error" role="alert" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <div class="app-shell is-locked" id="app-shell" aria-hidden="true">
+      <aside class="sidebar" aria-label="Dashboard navigation">
+        <div class="brand">
+          <span class="brand-mark">TA</span>
+          <div>
+            <strong>Trading Agent</strong>
+            <small>Research Dashboard</small>
+          </div>
+        </div>
+        <nav class="nav-list" id="dashboard-nav">
+          <button class="nav-item active" data-page="overview">Overview</button>
+          <button class="nav-item" data-page="stocks">Stocks & ETFs</button>
+          <button class="nav-item" data-page="crypto">Crypto</button>
+          <button class="nav-item" data-page="recommendations">Recommendations</button>
+          <button class="nav-item" data-page="asset-detail">Asset Detail</button>
+          <button class="nav-item" data-page="portfolio">Portfolio</button>
+          <button class="nav-item" data-page="settings">Settings</button>
+        </nav>
+        <section class="sidebar-card">
+          <span class="eyebrow">Data mode</span>
+          <strong id="data-mode">Loading</strong>
+          <small id="market-status">Waiting for snapshot</small>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Hybrid professional dashboard</p>
+            <h1 id="page-title">Overview</h1>
+          </div>
+          <div class="topbar-actions">
+            <label class="search-box">
+              <span>Search</span>
+              <input id="symbol-search" type="search" placeholder="MSFT, BTC, QQQ..." />
+            </label>
+            <div class="freshness">
+              <span>Last refresh</span>
+              <strong id="last-refresh">--</strong>
+            </div>
+          </div>
+        </header>
+
+        <section class="notice">
+          <strong>Research use only.</strong>
+          Signals are analytical outputs, not guaranteed investment advice. Validate data freshness, risk, and strategy fit before acting.
+        </section>
+
+        <section class="page active" id="page-overview" data-title="Overview">
+          <div class="metric-grid" id="index-cards"></div>
+          <div class="dashboard-grid two-columns">
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Opportunity radar</p>
+                  <h2>Top ranked signals</h2>
+                </div>
+              </div>
+              <div id="top-signals" class="signal-list"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Market regime</p>
+                  <h2>Daily command center</h2>
+                </div>
+              </div>
+              <div id="regime-card" class="regime-card"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page" id="page-stocks" data-title="Stocks & ETFs">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">US stocks + ETFs</p>
+                <h2>Screener</h2>
+              </div>
+              <select id="stock-filter" class="control">
+                <option value="all">All recommendations</option>
+                <option value="Buy">Buy only</option>
+                <option value="Hold">Hold only</option>
+                <option value="Sell">Sell only</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Type</th>
+                    <th>Price</th>
+                    <th>Change</th>
+                    <th>Total</th>
+                    <th>Technical</th>
+                    <th>Fundamental</th>
+                    <th>Risk</th>
+                    <th>Signal</th>
+                  </tr>
+                </thead>
+                <tbody id="stocks-table"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="page" id="page-crypto" data-title="Crypto">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Top crypto assets</p>
+                <h2>Crypto screener</h2>
+              </div>
+              <button class="secondary-button" id="refresh-crypto">Refresh public crypto prices</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Asset</th>
+                    <th>Price</th>
+                    <th>Change</th>
+                    <th>Total</th>
+                    <th>Liquidity</th>
+                    <th>Derivatives</th>
+                    <th>On-chain</th>
+                    <th>Signal</th>
+                  </tr>
+                </thead>
+                <tbody id="crypto-table"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="page" id="page-recommendations" data-title="Recommendations">
+          <div class="dashboard-grid three-columns" id="recommendation-columns"></div>
+        </section>
+
+        <section class="page" id="page-asset-detail" data-title="Asset Detail">
+          <article class="panel asset-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Deep analysis</p>
+                <h2 id="asset-heading">Select an asset</h2>
+              </div>
+              <select id="asset-selector" class="control"></select>
+            </div>
+            <div class="asset-layout">
+              <div>
+                <div id="asset-chart" class="chart-card"></div>
+                <div id="asset-scores" class="score-grid"></div>
+              </div>
+              <aside id="asset-insight" class="insight-panel"></aside>
+            </div>
+          </article>
+        </section>
+
+        <section class="page" id="page-portfolio" data-title="Portfolio">
+          <div class="dashboard-grid two-columns">
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Manual tracking</p>
+                  <h2>Portfolio positions</h2>
+                </div>
+              </div>
+              <form id="portfolio-form" class="portfolio-form">
+                <input name="symbol" placeholder="Symbol" required />
+                <input name="quantity" type="number" min="0" step="any" placeholder="Quantity" required />
+                <input name="costBasis" type="number" min="0" step="any" placeholder="Cost basis" required />
+                <button type="submit">Add</button>
+              </form>
+              <label class="csv-import">
+                <span>CSV import: symbol,quantity,costBasis</span>
+                <input id="portfolio-csv" type="file" accept=".csv,text/csv" />
+              </label>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Symbol</th>
+                      <th>Qty</th>
+                      <th>Cost</th>
+                      <th>Value</th>
+                      <th>P&L</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="portfolio-table"></tbody>
+                </table>
+              </div>
+            </article>
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Risk view</p>
+                  <h2>Allocation & warnings</h2>
+                </div>
+              </div>
+              <div id="portfolio-summary" class="portfolio-summary"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page" id="page-settings" data-title="Settings">
+          <div class="dashboard-grid two-columns">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Configuration</p>
+                <h2>Scoring weights</h2>
+              </div>
+            </div>
+            <form id="weights-form" class="weights-grid"></form>
+          </article>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Professional roadmap</p>
+                <h2>Next upgrades</h2>
+              </div>
+            </div>
+            <ul class="upgrade-list">
+              <li>Connect licensed real-time stock data when free APIs are no longer enough.</li>
+              <li>Add backtesting, performance attribution, and signal audit trails before production trading use.</li>
+              <li>Add alerts, watchlist workflows, and historical recommendation changes.</li>
+              <li>Separate public static hosting from private team data if stronger authentication is required.</li>
+            </ul>
+          </article>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>

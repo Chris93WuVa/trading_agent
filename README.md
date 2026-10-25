@@ -1,53 +1,104 @@
-# trading_agent
+# Kursbuch
 
-A GitHub Pages-hosted trading dashboard for personal and team-based investment research across US stocks, ETFs, and crypto assets.
+Privates Trading-Dashboard für Aktien, ETFs, Fonds, Anleihen, Währungen, Krypto,
+Derivate (Futures, Optionsketten) und Indizes – aufgebaut wie Trade Republic: Depot
+mit großem Wert und Chart, Suche, Top-Listen je Anlageklasse und eine Detailseite mit
+Kennzahlen und einer nachvollziehbaren Einschätzung **Kaufen / Halten / Verkaufen**.
 
-## Implemented dashboard
+Das Design orientiert sich an einem Kursblatt aus Papier: Haarlinien statt Kacheln,
+Serifen-Ziffern für große Werte, Monospace für Tabellen und eine einzige Akzentfarbe.
+Hell- und Dunkelmodus, auch für Mobilgeräte.
 
-The repository now contains a static, GitHub Pages-compatible dashboard implementation:
+## Funktionen
 
-- Professional dark hybrid dashboard UI.
-- Overview page with market cards, top signals, and market-regime summary.
-- Stocks & ETFs screener with Buy / Hold / Sell analytical signals.
-- Crypto screener with price, liquidity, derivatives, and selected on-chain score placeholders.
-- Asset detail page with professional technical chart analysis, score breakdown, explanation, stop-loss, and take-profit references.
-- Recommendations page grouped by Buy, Hold, and Sell.
-- Manual portfolio tracker with local browser storage, CSV import support, and delete actions for custom positions.
-- Settings page for scoring-weight visibility and professionalization roadmap.
-- Daily snapshot generation script and GitHub Pages deployment workflow.
+* **Suche** über alle Anlageklassen (Yahoo Finance), Tastenkürzel `/` oder `⌘K`
+* **Top-Listen** je Klasse (kuratiert für Anleger in Deutschland) plus dynamische
+  US-Listen: meistgehandelt, Tagesgewinner, Tagesverlierer
+* **Sammlung** (Watchlist): Werte mit dem Stern hinzufügen oder entfernen
+* **Depot**: Käufe mit Stückzahl, Kaufkurs und Datum erfassen; Wert in EUR mit
+  Devisenumrechnung, Tages- und Gesamt-G/V, Aufteilung nach Anlageklasse, Wertverlauf
+* **Chart** 1T · 1W · 1M · 6M · 1J · 5J · MAX mit Fadenkreuz (Wert oben folgt dem Finger)
+* **Kennzahlen**: Performance, Volatilität, Drawdown, Sharpe, Sortino, Beta, SMA,
+  RSI, MACD, Bollinger, ATR, Momentum, Fundamentaldaten, Analystenkonsens
+* **Einschätzung** aus sieben literaturgestützten Faktoren inkl. Begründung,
+  Konsistenz, Datenabdeckung und volatilitätsbasierten Stop-/Zielmarken
+* **Trendregel im Rückblick**: SMA-200-Regel vs. Kaufen & Halten (ohne Look-ahead, mit Kosten)
+* **Optionsketten** für US-Aktien und US-ETFs
+* **Methodik-Seite** mit allen Formeln und 25 Quellen (DOI) – siehe [`docs/METHODIK.md`](docs/METHODIK.md)
 
-## Access protection
+> Die Einschätzung ist eine strukturierte, regelbasierte Auswertung und keine
+> Anlageberatung. Grenzen der Methode sind in der Methodik beschrieben.
 
-The static GitHub Pages dashboard displays a client-side password gate before loading dashboard data. The configured dashboard password is `stitch32`. Because GitHub Pages serves static public files, this is a casual-access barrier and not a replacement for server-side authentication.
+## Architektur
 
-## Run locally
-
-Because the app fetches `data/market_snapshot.json`, serve the repository with a local static server instead of opening `index.html` directly:
-
-```bash
-python -m http.server 8000
+```
+Browser ──HTTPS──▶ nginx (TLS, Rate-Limit) ──▶ uvicorn/FastAPI (127.0.0.1:8000)
+                                                ├─ /api/*   REST, Login per Session-Cookie
+                                                ├─ /        Frontend (HTML/CSS/JS, ohne Build)
+                                                ├─ SQLite   Sammlung & Positionen
+                                                └─ yfinance Kurse, Historie, Stammdaten (gecacht)
 ```
 
-Then open <http://localhost:8000>.
+* `backend/app/` – FastAPI-App, Analytik, Signal, Provider (Yahoo / Demo), SQLite
+* `frontend/` – Single-Page-App ohne Abhängigkeiten; Schriften selbst gehostet
+  (Instrument Sans/Serif, IBM Plex Mono, SIL OFL), keine Verbindungen zu Drittanbietern
+* `deploy/` – Installer, systemd-Unit, nginx-Vorlage
 
-## Data refresh
+**Sicherheit:** Passwort als scrypt-Hash, signiertes HttpOnly-/Secure-/SameSite-Strict-Cookie,
+Login-Drosselung (App + nginx), CSRF-Header für schreibende Aufrufe, strikte
+Content-Security-Policy, systemd-Sandboxing.
 
-The first implementation uses `data/market_snapshot.json` as the dashboard snapshot. The snapshot can be regenerated with:
+## Installation auf dem Hostinger-VPS (Ubuntu)
+
+1. **DNS:** Im Hostinger-Panel (Domains → DNS-Zone) einen `A`-Record
+   `dashboard` → IP deines VPS anlegen (bei IPv6 zusätzlich `AAAA`). Prüfen:
+   `dig +short dashboard.EIGENE-DOMAIN.de`
+2. **Per SSH einloggen** und Repository holen:
+   ```bash
+   ssh root@<VPS-IP>
+   apt-get update && apt-get install -y git
+   git clone https://github.com/Chris93WuVa/trading_agent.git
+   cd trading_agent
+   ```
+3. **Installer starten** (fragt das Dashboard-Passwort ab, mind. 10 Zeichen):
+   ```bash
+   sudo bash deploy/install.sh dashboard.EIGENE-DOMAIN.de deine@mail.de
+   ```
+   Der Installer richtet Python-venv, systemd-Dienst, nginx, Firewall (ufw) und ein
+   Let's-Encrypt-Zertifikat mit automatischer Verlängerung ein.
+4. Fertig: `https://dashboard.EIGENE-DOMAIN.de`
+
+Falls Port 80/443 in der Hostinger-Firewall (VPS → Sicherheit → Firewall) gesperrt sind,
+dort freigeben.
+
+**Updates:** `cd ~/trading_agent && git pull && sudo bash deploy/update.sh`
+**Logs:** `journalctl -u kursbuch -f`
+**Passwort ändern:** `cd /opt/kursbuch/backend && sudo /opt/kursbuch/venv/bin/python -m app.auth`,
+Ausgabe in `/etc/kursbuch/kursbuch.env` bei `DASHBOARD_PASSWORD_HASH` eintragen,
+`sudo systemctl restart kursbuch`.
+**Backup:** `/var/lib/kursbuch/kursbuch.sqlite3` sichern.
+
+## Lokal entwickeln
 
 ```bash
-npm run generate:data
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+cp ../.env.example ../.env          # Hash mit `python -m app.auth` erzeugen und eintragen
+uvicorn app.main:app --reload       # http://127.0.0.1:8000
+pytest -q
 ```
 
-The generator includes deterministic fallback data and attempts to refresh public crypto prices when network access is available. GitHub Actions runs the generator and validates the dashboard before deploying to GitHub Pages.
+Mit `DATA_PROVIDER=demo` läuft alles offline mit synthetischen Kursen (im UI als
+„Demo-Daten“ markiert).
 
-## Validation
+## Daten
 
-Run the static validation suite with:
+Yahoo Finance über [`yfinance`](https://github.com/ranaroussi/yfinance). Es gibt keine
+offizielle API; Kurse sind je nach Börse bis zu 20 Minuten verzögert, Ausfälle sind
+möglich. Die Daten sind nur für private Nutzung bestimmt. Einzelanleihen und
+Hebelprodukte (Optionsscheine, Knock-outs) sind über freie Quellen nicht verfügbar;
+Anleihen werden über Renditen und Anleihe-ETFs abgebildet.
 
-```bash
-npm test
-```
-
-## Project plan
-
-The planning document remains available in [`docs/dashboard_product_plan.md`](docs/dashboard_product_plan.md).
+Symbole folgen der Yahoo-Schreibweise: `SAP.DE` (Xetra), `EUNL.DE`, `EURUSD=X`,
+`BTC-EUR`, `GC=F` (Gold-Future), `^GDAXI` (DAX).

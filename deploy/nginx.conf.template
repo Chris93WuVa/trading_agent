@@ -1,0 +1,37 @@
+# /etc/nginx/sites-available/kursbuch  –  __DOMAIN__ wird vom Installer ersetzt.
+# HTTPS-Blöcke ergänzt certbot automatisch (certbot --nginx).
+
+limit_req_zone $binary_remote_addr zone=kursbuch_login:10m rate=10r/m;
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __DOMAIN__;
+
+    client_max_body_size 64k;
+    server_tokens off;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Frame-Options "DENY" always;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    location = /api/login {
+        limit_req zone=kursbuch_login burst=5 nodelay;
+        proxy_pass http://127.0.0.1:8000;
+        include /etc/nginx/proxy_params;
+    }
+
+    location /assets/ {
+        proxy_pass http://127.0.0.1:8000;
+        include /etc/nginx/proxy_params;
+        expires 1h;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        include /etc/nginx/proxy_params;
+        proxy_read_timeout 60s;
+    }
+}

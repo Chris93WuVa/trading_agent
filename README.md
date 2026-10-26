@@ -1,4 +1,4 @@
-# Kursbuch
+# Trading-Board
 
 Privates Trading-Dashboard für Aktien, ETFs, Fonds, Anleihen, Währungen, Krypto,
 Derivate (Futures, Optionsketten) und Indizes – aufgebaut wie Trade Republic: Depot
@@ -50,7 +50,7 @@ Content-Security-Policy, systemd-Sandboxing.
 
 ## Installation auf dem VPS
 
-Kursbuch läuft als eigener Dienst auf `127.0.0.1:8710` und ist von außen nicht direkt
+Trading-Board läuft als eigener Dienst auf `127.0.0.1:8710` und ist von außen nicht direkt
 erreichbar. Der vorhandene nginx nimmt Anfragen für die Subdomain entgegen und leitet
 sie weiter (Reverse-Proxy). Die WordPress-Seite auf der Hauptdomain bleibt unverändert,
 denn nginx unterscheidet die Seiten am angefragten Hostnamen.
@@ -62,9 +62,9 @@ per `certbot certonly --webroot` (ändert keine nginx-Dateien), optional fail2ba
 Updates, Backup und Deinstallation.
 
 Vorlagen in `deploy/`:
-* `kursbuch.service` – systemd-Unit (uvicorn, Sandboxing)
-* `nginx-kursbuch.conf` – Server-Blöcke nur für die Subdomain (Port 80 → HTTPS, Port 443 → App)
-* `fail2ban-kursbuch.conf` – Filter und Jail für fehlgeschlagene Logins
+* `trading-board.service` – systemd-Unit (uvicorn, Sandboxing)
+* `nginx-trading-board.conf` – Server-Blöcke nur für die Subdomain (Port 80 → HTTPS, Port 443 → App)
+* `fail2ban-trading-board.conf` – Filter und Jail für fehlgeschlagene Logins
 
 ## Lokal entwickeln
 

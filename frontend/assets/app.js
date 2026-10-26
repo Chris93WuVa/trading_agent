@@ -1,4 +1,4 @@
-// Kursbuch – Single-Page-App (Hash-Routing, keine Build-Tools).
+// Trading-Board – Single-Page-App (Hash-Routing, keine Build-Tools).
 
 import { createChart, multiLine } from './chart.js';
 import { REFS, REF_ORDER } from './refs.js';
@@ -15,14 +15,14 @@ function applyTheme(theme) {
   if (theme) document.documentElement.dataset.theme = theme;
   else delete document.documentElement.dataset.theme;
 }
-try { applyTheme(localStorage.getItem('kb-theme')); } catch { /* Speicher gesperrt */ }
+try { applyTheme(localStorage.getItem('tb-theme')); } catch { /* Speicher gesperrt */ }
 function toggleTheme() {
   const dark = document.documentElement.dataset.theme
     ? document.documentElement.dataset.theme === 'dark'
     : matchMedia('(prefers-color-scheme: dark)').matches;
   const next = dark ? 'light' : 'dark';
   applyTheme(next);
-  try { localStorage.setItem('kb-theme', next); } catch { /* egal */ }
+  try { localStorage.setItem('tb-theme', next); } catch { /* egal */ }
 }
 
 /* ------------------------------------------------------------------ Login */
@@ -31,7 +31,7 @@ function renderLogin(message = '') {
   root.innerHTML = html`
     <div class="login">
       <div class="login__inner">
-        <h1>Kursbuch</h1>
+        <h1>Trading-Board</h1>
         <p>Privates Markt- und Depotjournal.</p>
         <form id="login-form" autocomplete="on">
           <label class="field">
@@ -60,13 +60,13 @@ function renderLogin(message = '') {
   });
 }
 
-window.addEventListener('kb:logout', () => renderLogin('Sitzung abgelaufen – bitte erneut anmelden.'));
+window.addEventListener('tb:logout', () => renderLogin('Sitzung abgelaufen – bitte erneut anmelden.'));
 
 /* ------------------------------------------------------------------ Shell */
 function renderShell() {
   root.innerHTML = html`
     <header class="masthead">
-      <a class="wordmark" href="#/depot">Kursbuch <small>${state.meta.demo ? '' : 'Markt · Depot'}</small>
+      <a class="wordmark" href="#/depot">Trading-Board <small>${state.meta.demo ? '' : 'Markt · Depot'}</small>
         ${state.meta.demo ? h`<span class="badge-demo" title="Synthetische Kurse – keine echten Marktdaten">Demo-Daten</span>` : ''}
       </a>
       <div class="search" id="search">
@@ -132,7 +132,7 @@ async function boot() {
     state.meta = await api('meta');
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) { renderLogin(); return; }
-    root.innerHTML = html`<div class="login"><div class="login__inner"><h1>Kursbuch</h1><p class="error-box">${err.message}</p></div></div>`;
+    root.innerHTML = html`<div class="login"><div class="login__inner"><h1>Trading-Board</h1><p class="error-box">${err.message}</p></div></div>`;
     return;
   }
   renderShell();
@@ -348,7 +348,7 @@ async function depotView(view) {
     if (!pf.holdings.length) {
       chartBox.hidden = true; ranges.hidden = true;
       body.innerHTML = html`<div class="section"><div class="empty">
-        <h3>Ein leeres Kursbuch.</h3>
+        <h3>Dein Depot ist noch leer.</h3>
         <p>Suche oben nach einem Wertpapier oder stöbere in den <a class="link" href="#/maerkte">Märkten</a>.
         Auf der Detailseite kannst du es zur Sammlung hinzufügen oder eine Position mit Stückzahl und Kaufkurs erfassen.</p>
       </div></div>`;
@@ -497,8 +497,8 @@ async function instrumentView(view, symbol) {
   const q = inst.quote;
   const isYield = q.is_yield;
   const inColl = state.collection.has(symbol);
-  document.title = `${q.name} · Kursbuch`;
-  state.cleanup.push(() => { document.title = 'Kursbuch'; });
+  document.title = `${q.name} · Trading-Board`;
+  state.cleanup.push(() => { document.title = 'Trading-Board'; });
 
   view.innerHTML = html`<div class="page">
     <div class="hero">
@@ -858,7 +858,7 @@ function methodikView(view) {
   const target = location.hash.split('/')[2];
   view.innerHTML = html`<div class="page"><div class="prose">
     <div class="hero"><span class="label">Methodik</span><h1 class="hero__title">Wie die Einschätzung entsteht</h1></div>
-    <p>Kursbuch berechnet alle Kennzahlen selbst aus täglichen, um Dividenden und Splits bereinigten Schlusskursen (bis zu zehn Jahre).
+    <p>Trading-Board berechnet alle Kennzahlen selbst aus täglichen, um Dividenden und Splits bereinigten Schlusskursen (bis zu zehn Jahre).
     Die Einschätzung <strong>Kaufen / Halten / Verkaufen</strong> ist ein gewichteter Mittelwert einzelner Faktoren im Bereich −1 bis +1.
     Jeder Faktor beruht auf einem in begutachteter Literatur dokumentierten Effekt. Alle Gewichte, Normierungen und Schwellen stehen offen im Quellcode
     (<code>backend/app/signals.py</code>).</p>

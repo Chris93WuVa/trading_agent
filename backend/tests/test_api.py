@@ -31,7 +31,7 @@ def test_instrument_chart_analysis(authed):
 
 
 def test_collection_and_portfolio_roundtrip(authed):
-    h = {"X-Kursbuch": "1"}
+    h = {"X-Trading-Board": "1"}
     assert authed.post("/api/collection", json={"symbol": "NVDA"}, headers=h).status_code == 200
     assert "NVDA" in [i["symbol"] for i in authed.get("/api/collection").json()["items"]]
     r = authed.post("/api/positions", json={"symbol": "AAPL", "quantity": 2, "price": 10}, headers=h)
@@ -48,5 +48,5 @@ def test_collection_and_portfolio_roundtrip(authed):
 
 def test_frontend_served_with_csp(client):
     r = client.get("/")
-    assert r.status_code == 200 and "Kursbuch" in r.text
+    assert r.status_code == 200 and "Trading-Board" in r.text
     assert "frame-ancestors 'none'" in r.headers["content-security-policy"]

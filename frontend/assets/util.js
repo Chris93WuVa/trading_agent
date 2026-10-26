@@ -6,7 +6,7 @@ export class ApiError extends Error {
 
 export async function api(path, { method = 'GET', body } = {}) {
   const headers = { Accept: 'application/json' };
-  if (method !== 'GET') headers['X-Kursbuch'] = '1';
+  if (method !== 'GET') headers['X-Trading-Board'] = '1';
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   const res = await fetch(`/api/${path}`, {
     method, headers, credentials: 'same-origin',
@@ -14,7 +14,7 @@ export async function api(path, { method = 'GET', body } = {}) {
   });
   let data = null;
   try { data = await res.json(); } catch { /* leere Antwort */ }
-  if (res.status === 401 && path !== 'login') window.dispatchEvent(new Event('kb:logout'));
+  if (res.status === 401 && path !== 'login') window.dispatchEvent(new Event('tb:logout'));
   if (!res.ok) {
     const detail = Array.isArray(data?.detail) ? data.detail.map((d) => d.msg).join(', ') : data?.detail;
     throw new ApiError(res.status, detail || `Fehler ${res.status}`);

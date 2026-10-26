@@ -16,7 +16,7 @@ import secrets
 import threading
 import time
 
-COOKIE_NAME = "kb_session"
+COOKIE_NAME = "tb_session"
 _N, _R, _P = 2**15, 8, 1
 
 

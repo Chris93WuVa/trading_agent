@@ -9,15 +9,15 @@ Ersetze überall `dashboard.EIGENE-DOMAIN.de` durch deine Subdomain.
 
 | Was | Wo | Neu oder geändert |
 | --- | --- | --- |
-| Systembenutzer `kursbuch` | `/etc/passwd` | neu |
-| Programmcode + Python-venv | `/opt/kursbuch` | neu |
-| Daten (SQLite, Cache) | `/var/lib/kursbuch` | neu |
-| Passwort-Hash, Schlüssel | `/etc/kursbuch/kursbuch.env` | neu |
-| Dienst | `/etc/systemd/system/kursbuch.service` | neu |
-| nginx-Site | `/etc/nginx/sites-available/kursbuch` (+ Symlink) | neu |
+| Systembenutzer `trading-board` | `/etc/passwd` | neu |
+| Programmcode + Python-venv | `/opt/trading-board` | neu |
+| Daten (SQLite, Cache) | `/var/lib/trading-board` | neu |
+| Passwort-Hash, Schlüssel | `/etc/trading-board/trading-board.env` | neu |
+| Dienst | `/etc/systemd/system/trading-board.service` | neu |
+| nginx-Site | `/etc/nginx/sites-available/trading-board` (+ Symlink) | neu |
 | ACME-Webroot | `/var/www/letsencrypt` | neu (falls nicht vorhanden) |
 | Zertifikat | `/etc/letsencrypt/live/dashboard.…` | neu |
-| fail2ban (optional) | `filter.d/kursbuch.conf`, `jail.d/kursbuch.local` | neu |
+| fail2ban (optional) | `filter.d/trading-board.conf`, `jail.d/trading-board.local` | neu |
 
 Bestehende Dateien (WordPress-Sites, `nginx.conf`, Firewall-Regeln, vorhandene
 fail2ban-Jails, Zertifikate) werden nicht verändert. Der Dienst lauscht nur auf
@@ -55,18 +55,18 @@ sudo apt-get install python3-venv git
 Der Dienst läuft unter einem eigenen Benutzer ohne Login-Shell.
 
 ```bash
-sudo useradd --system --home /var/lib/kursbuch --shell /usr/sbin/nologin kursbuch
-sudo install -d -o kursbuch -g kursbuch -m 750 /var/lib/kursbuch /var/lib/kursbuch/cache
-sudo install -d -m 750 /etc/kursbuch
+sudo useradd --system --home /var/lib/trading-board --shell /usr/sbin/nologin trading-board
+sudo install -d -o trading-board -g trading-board -m 750 /var/lib/trading-board /var/lib/trading-board/cache
+sudo install -d -m 750 /etc/trading-board
 ```
 
 ## 3. Code und Python-Umgebung
 
 ```bash
-sudo git clone https://github.com/Chris93WuVa/trading_agent.git /opt/kursbuch
-sudo python3 -m venv /opt/kursbuch/venv
-sudo /opt/kursbuch/venv/bin/pip install --upgrade pip
-sudo /opt/kursbuch/venv/bin/pip install -r /opt/kursbuch/backend/requirements.txt
+sudo git clone https://github.com/Chris93WuVa/trading_agent.git /opt/trading-board
+sudo python3 -m venv /opt/trading-board/venv
+sudo /opt/trading-board/venv/bin/pip install --upgrade pip
+sudo /opt/trading-board/venv/bin/pip install -r /opt/trading-board/backend/requirements.txt
 ```
 
 Der Code gehört `root`; der Dienstbenutzer darf ihn nur lesen.
@@ -75,39 +75,39 @@ Der Code gehört `root`; der Dienstbenutzer darf ihn nur lesen.
 
 ```bash
 # Fragt das Dashboard-Passwort ab (mind. 10 Zeichen) und gibt NUR den scrypt-Hash aus
-cd /opt/kursbuch/backend && sudo /opt/kursbuch/venv/bin/python -m app.auth
+cd /opt/trading-board/backend && sudo /opt/trading-board/venv/bin/python -m app.auth
 
 # Zufälligen Signaturschlüssel für Sitzungs-Cookies erzeugen
-/opt/kursbuch/venv/bin/python -c 'import secrets; print(secrets.token_urlsafe(48))'
+/opt/trading-board/venv/bin/python -c 'import secrets; print(secrets.token_urlsafe(48))'
 ```
 
-Beide Werte in `/etc/kursbuch/kursbuch.env` eintragen (z. B. mit `sudo nano`):
+Beide Werte in `/etc/trading-board/trading-board.env` eintragen (z. B. mit `sudo nano`):
 
 ```ini
 DASHBOARD_PASSWORD_HASH=scrypt:32768:8:1:...
 SECRET_KEY=...
 DATA_PROVIDER=yahoo
-DATA_DIR=/var/lib/kursbuch
-FRONTEND_DIR=/opt/kursbuch/frontend
+DATA_DIR=/var/lib/trading-board
+FRONTEND_DIR=/opt/trading-board/frontend
 COOKIE_SECURE=1
 SESSION_DAYS=14
 ```
 
 ```bash
-sudo chown root:kursbuch /etc/kursbuch/kursbuch.env
-sudo chmod 640 /etc/kursbuch/kursbuch.env
+sudo chown root:trading-board /etc/trading-board/trading-board.env
+sudo chmod 640 /etc/trading-board/trading-board.env
 ```
 
 ## 5. Dienst (systemd)
 
-Vorher `deploy/kursbuch.service` lesen. Die Unit startet uvicorn auf `127.0.0.1:8710`
-mit Sandboxing: nur `/var/lib/kursbuch` ist beschreibbar.
+Vorher `deploy/trading-board.service` lesen. Die Unit startet uvicorn auf `127.0.0.1:8710`
+mit Sandboxing: nur `/var/lib/trading-board` ist beschreibbar.
 
 ```bash
-sudo cp /opt/kursbuch/deploy/kursbuch.service /etc/systemd/system/
+sudo cp /opt/trading-board/deploy/trading-board.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now kursbuch
-systemctl status kursbuch --no-pager
+sudo systemctl enable --now trading-board
+systemctl status trading-board --no-pager
 curl -s http://127.0.0.1:8710/api/health          # -> {"ok":true}
 ```
 
@@ -117,7 +117,7 @@ Das Zertifikat wird per **HTTP-01-Challenge** (ACME, RFC 8555) ausgestellt: Let'
 Encrypt ruft `http://dashboard.…/.well-known/acme-challenge/<token>` ab. Dafür braucht
 nginx zuerst einen Port-80-Block für die Subdomain.
 
-**6a. Vorläufige Site nur mit Port 80** anlegen, als `/etc/nginx/sites-available/kursbuch`:
+**6a. Vorläufige Site nur mit Port 80** anlegen, als `/etc/nginx/sites-available/trading-board`:
 
 ```nginx
 server {
@@ -131,7 +131,7 @@ server {
 
 ```bash
 sudo install -d /var/www/letsencrypt
-sudo ln -s /etc/nginx/sites-available/kursbuch /etc/nginx/sites-enabled/kursbuch
+sudo ln -s /etc/nginx/sites-available/trading-board /etc/nginx/sites-enabled/trading-board
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -155,8 +155,8 @@ Erneuerung neu.
 
 ## 7. Endgültige nginx-Site
 
-`deploy/nginx-kursbuch.conf` lesen, die Subdomain ersetzen und den Inhalt nach
-`/etc/nginx/sites-available/kursbuch` übernehmen (ersetzt die vorläufige Datei aus 6a).
+`deploy/nginx-trading-board.conf` lesen, die Subdomain ersetzen und den Inhalt nach
+`/etc/nginx/sites-available/trading-board` übernehmen (ersetzt die vorläufige Datei aus 6a).
 Optional deine vorhandenen TLS-Einstellungen per `include` einbinden (in der Vorlage kommentiert).
 
 ```bash
@@ -167,25 +167,25 @@ curl -sI https://dashboard.EIGENE-DOMAIN.de | head -5
 Was die Datei enthält:
 * **Port 80:** liefert nur ACME-Challenges aus und leitet alles andere auf HTTPS um.
 * **Port 443:** TLS, HSTS (nur für die Subdomain), Weiterleitung an `127.0.0.1:8710`,
-  Login-Drosselung (`limit_req`, 10/min), eigene Logdateien `kursbuch_*.log`.
+  Login-Drosselung (`limit_req`, 10/min), eigene Logdateien `trading-board_*.log`.
 * Den Hostnamen der Anfrage (`server_name`) erkennt nginx über Host-Header bzw. SNI.
   Deshalb können WordPress und das Dashboard auf derselben IP und denselben Ports laufen.
 
 ## 8. fail2ban (optional)
 
 Die App protokolliert Fehlversuche mit echter Client-IP im Journal. Eine passende
-Filter- und Jail-Vorlage steht in `deploy/fail2ban-kursbuch.conf`.
+Filter- und Jail-Vorlage steht in `deploy/fail2ban-trading-board.conf`.
 
 ```bash
-sudo fail2ban-regex systemd-journal /etc/fail2ban/filter.d/kursbuch.conf
-sudo fail2ban-client reload && sudo fail2ban-client status kursbuch
+sudo fail2ban-regex systemd-journal /etc/fail2ban/filter.d/trading-board.conf
+sudo fail2ban-client reload && sudo fail2ban-client status trading-board
 ```
 
 ## 9. Funktionstest
 
 1. `https://dashboard.EIGENE-DOMAIN.de` aufrufen und anmelden.
 2. Märkte → Aktien: Kurse müssen erscheinen (kein Hinweis „Demo-Daten“).
-3. Bei Problemen: `journalctl -u kursbuch -f` und `/var/log/nginx/kursbuch_error.log`.
+3. Bei Problemen: `journalctl -u trading-board -f` und `/var/log/nginx/trading-board_error.log`.
 4. Prüfen, ob die WordPress-Seite unverändert erreichbar ist.
 
 ---
@@ -193,37 +193,37 @@ sudo fail2ban-client reload && sudo fail2ban-client status kursbuch
 ## Updates
 
 ```bash
-cd /opt/kursbuch
+cd /opt/trading-board
 sudo git pull
-sudo /opt/kursbuch/venv/bin/pip install -r backend/requirements.txt
-sudo systemctl restart kursbuch
+sudo /opt/trading-board/venv/bin/pip install -r backend/requirements.txt
+sudo systemctl restart trading-board
 curl -s http://127.0.0.1:8710/api/health
 ```
 
-Hat sich `deploy/kursbuch.service` oder `deploy/nginx-kursbuch.conf` geändert
+Hat sich `deploy/trading-board.service` oder `deploy/nginx-trading-board.conf` geändert
 (`git log -p -- deploy/` zeigt es), übernimmst du die Änderung selbst.
 
 ## Backup
 
 Alle Nutzerdaten liegen in einer Datei:
-`/var/lib/kursbuch/kursbuch.sqlite3`. Sicherung im laufenden Betrieb (Paket `sqlite3`):
+`/var/lib/trading-board/trading-board.sqlite3`. Sicherung im laufenden Betrieb (Paket `sqlite3`):
 
 ```bash
-sudo -u kursbuch sqlite3 /var/lib/kursbuch/kursbuch.sqlite3 ".backup '/var/lib/kursbuch/backup.sqlite3'"
+sudo -u trading-board sqlite3 /var/lib/trading-board/trading-board.sqlite3 ".backup '/var/lib/trading-board/backup.sqlite3'"
 ```
 
 ## Passwort ändern
 
-Neuen Hash wie in Schritt 4 erzeugen, in `kursbuch.env` ersetzen und dann
-`sudo systemctl restart kursbuch` ausführen.
+Neuen Hash wie in Schritt 4 erzeugen, in `trading-board.env` ersetzen und dann
+`sudo systemctl restart trading-board` ausführen.
 
 ## Vollständig entfernen
 
 ```bash
-sudo systemctl disable --now kursbuch
-sudo rm /etc/systemd/system/kursbuch.service /etc/nginx/sites-enabled/kursbuch /etc/nginx/sites-available/kursbuch
+sudo systemctl disable --now trading-board
+sudo rm /etc/systemd/system/trading-board.service /etc/nginx/sites-enabled/trading-board /etc/nginx/sites-available/trading-board
 sudo nginx -t && sudo systemctl reload nginx
 sudo certbot delete --cert-name dashboard.EIGENE-DOMAIN.de
-sudo rm -r /opt/kursbuch /etc/kursbuch /var/lib/kursbuch
-sudo userdel kursbuch
+sudo rm -r /opt/trading-board /etc/trading-board /var/lib/trading-board
+sudo userdel trading-board
 ```

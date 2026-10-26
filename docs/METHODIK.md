@@ -1,6 +1,6 @@
 # Methodik
 
-Kursbuch berechnet alle Kennzahlen selbst aus täglichen, um Dividenden und Splits
+Trading-Board berechnet alle Kennzahlen selbst aus täglichen, um Dividenden und Splits
 bereinigten Schlusskursen (bis zu zehn Jahre, Quelle Yahoo Finance). Code:
 [`backend/app/analytics.py`](../backend/app/analytics.py) (Kennzahlen) und
 [`backend/app/signals.py`](../backend/app/signals.py) (Einschätzung).

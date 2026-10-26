@@ -1,17 +1,17 @@
 [Unit]
-Description=Kursbuch Trading Dashboard
+Description=Trading-Board Dashboard
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=kursbuch
-Group=kursbuch
-WorkingDirectory=/opt/kursbuch/backend
-EnvironmentFile=/etc/kursbuch/kursbuch.env
+User=trading-board
+Group=trading-board
+WorkingDirectory=/opt/trading-board/backend
+EnvironmentFile=/etc/trading-board/trading-board.env
 Environment=PYTHONUNBUFFERED=1
-Environment=XDG_CACHE_HOME=/var/lib/kursbuch/cache
+Environment=XDG_CACHE_HOME=/var/lib/trading-board/cache
 # Ein Worker: Cache, Login-Drosselung und SQLite liegen im Prozess.
-ExecStart=/opt/kursbuch/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8710 --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-server-header
+ExecStart=/opt/trading-board/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8710 --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-server-header
 Restart=on-failure
 RestartSec=3
 
@@ -19,7 +19,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/kursbuch
+ReadWritePaths=/var/lib/trading-board
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

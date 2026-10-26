@@ -1,4 +1,4 @@
-/* Kursbuch — editorial trading desk.
+/* Trading-Board — editorial trading desk.
    Papier, Tinte, Haarlinien. Eine Akzentfarbe. Keine Kacheln, kein Glas. */
 
 @font-face { font-family: "Instrument Sans"; src: url("fonts/instrument-sans.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
@@ -366,6 +366,8 @@ dialog .actions { display: flex; justify-content: flex-end; gap: 10px; margin-to
   .masthead .nav { display: none; }
   .search__box kbd { display: none; }
   .wordmark small { display: none; }
+  .wordmark { font-size: 23px; gap: 6px; }
+  .badge-demo { font-size: 9px; padding: 3px 4px; }
   .chart { height: 260px; }
   .tabbar {
     display: grid; grid-template-columns: repeat(3, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;

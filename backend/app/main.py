@@ -20,14 +20,14 @@ from .service import MarketService
 from .universe import ASSET_CLASSES, classify
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-log = logging.getLogger("kursbuch")
+log = logging.getLogger("trading-board")
 
 provider = DemoProvider() if settings.data_provider == "demo" else YahooProvider()
 service = MarketService(provider)
-db = Database(settings.data_dir / "kursbuch.sqlite3")
+db = Database(settings.data_dir / "trading-board.sqlite3")
 throttle = auth.LoginThrottle()
 
-app = FastAPI(title="Kursbuch", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="Trading-Board", docs_url=None, redoc_url=None, openapi_url=None)
 
 SYMBOL_RE = re.compile(r"^[A-Za-z0-9^=.\-]{1,24}$")
 PUBLIC_PATHS = {"/api/login", "/api/health"}
@@ -55,7 +55,7 @@ async def guard(request: Request, call_next):
             return JSONResponse({"detail": "Nicht angemeldet"}, status_code=401)
         # CSRF-Schutz: zusätzlich zu SameSite=Strict verlangen schreibende Aufrufe einen Header,
         # den ein fremdes Formular nicht setzen kann.
-        if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.headers.get("x-kursbuch") != "1":
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.headers.get("x-trading-board") != "1":
             return JSONResponse({"detail": "Fehlender Anfrage-Header"}, status_code=403)
     response = await call_next(request)
     response.headers["Content-Security-Policy"] = CSP

@@ -32,7 +32,7 @@ Hell- und Dunkelmodus, auch für Mobilgeräte.
 ## Architektur
 
 ```
-Browser ──HTTPS──▶ nginx (TLS, Rate-Limit) ──▶ uvicorn/FastAPI (127.0.0.1:8000)
+Browser ──HTTPS──▶ nginx/Apache (TLS) ──▶ uvicorn/FastAPI (127.0.0.1:8710)
                                                 ├─ /api/*   REST, Login per Session-Cookie
                                                 ├─ /        Frontend (HTML/CSS/JS, ohne Build)
                                                 ├─ SQLite   Sammlung & Positionen
@@ -42,7 +42,7 @@ Browser ──HTTPS──▶ nginx (TLS, Rate-Limit) ──▶ uvicorn/FastAPI (
 * `backend/app/` – FastAPI-App, Analytik, Signal, Provider (Yahoo / Demo), SQLite
 * `frontend/` – Single-Page-App ohne Abhängigkeiten; Schriften selbst gehostet
   (Instrument Sans/Serif, IBM Plex Mono, SIL OFL), keine Verbindungen zu Drittanbietern
-* `deploy/` – Installer, systemd-Unit, nginx-Vorlage
+* `deploy/` – Installer, Update-Skript, systemd-Unit, nginx- und Apache-Vorlage
 
 **Sicherheit:** Passwort als scrypt-Hash, signiertes HttpOnly-/Secure-/SameSite-Strict-Cookie,
 Login-Drosselung (App + nginx), CSRF-Header für schreibende Aufrufe, strikte
@@ -50,13 +50,17 @@ Content-Security-Policy, systemd-Sandboxing.
 
 ## Installation auf dem Hostinger-VPS (Ubuntu)
 
+Kursbuch läuft als eigener Dienst auf `127.0.0.1:8710` (von außen nicht erreichbar).
+Der vorhandene Webserver auf Port 80/443 nimmt Anfragen für die Subdomain entgegen und
+leitet sie weiter (Reverse-Proxy). Eine bestehende WordPress-Seite auf der Hauptdomain
+bleibt unverändert: Der Webserver unterscheidet die Seiten am angefragten Hostnamen.
+
 1. **DNS:** Im Hostinger-Panel (Domains → DNS-Zone) einen `A`-Record
    `dashboard` → IP deines VPS anlegen (bei IPv6 zusätzlich `AAAA`). Prüfen:
    `dig +short dashboard.EIGENE-DOMAIN.de`
 2. **Per SSH einloggen** und Repository holen:
    ```bash
    ssh root@<VPS-IP>
-   apt-get update && apt-get install -y git
    git clone https://github.com/Chris93WuVa/trading_agent.git
    cd trading_agent
    ```
@@ -64,12 +68,15 @@ Content-Security-Policy, systemd-Sandboxing.
    ```bash
    sudo bash deploy/install.sh dashboard.EIGENE-DOMAIN.de deine@mail.de
    ```
-   Der Installer richtet Python-venv, systemd-Dienst, nginx, Firewall (ufw) und ein
-   Let's-Encrypt-Zertifikat mit automatischer Verlängerung ein.
+   Der Installer erkennt, ob auf Port 80 **nginx** oder **Apache** läuft, legt dort einen
+   zusätzlichen virtuellen Host nur für die Subdomain an und holt per certbot ein
+   Let's-Encrypt-Zertifikat (Verlängerung automatisch über den certbot-Timer). Läuft
+   ein anderer Webserver (z. B. OpenLiteSpeed/CyberPanel), bricht er ab, bevor etwas
+   verändert wird. Dann im Panel einen Reverse-Proxy `dashboard.…` → `http://127.0.0.1:8710`
+   anlegen und den Installer mit `SKIP_WEB=1` erneut starten.
 4. Fertig: `https://dashboard.EIGENE-DOMAIN.de`
 
-Falls Port 80/443 in der Hostinger-Firewall (VPS → Sicherheit → Firewall) gesperrt sind,
-dort freigeben.
+Vor der Installation prüfen, welcher Webserver läuft: `sudo ss -ltnp 'sport = :80'`.
 
 **Updates:** `cd ~/trading_agent && git pull && sudo bash deploy/update.sh`
 **Logs:** `journalctl -u kursbuch -f`

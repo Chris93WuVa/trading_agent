@@ -10,4 +10,4 @@ install -m 644 "$APP/deploy/kursbuch.service" /etc/systemd/system/kursbuch.servi
 systemctl daemon-reload
 systemctl restart kursbuch
 sleep 2
-curl -fsS http://127.0.0.1:8000/api/health && echo " – Kursbuch läuft."
+curl -fsS http://127.0.0.1:8710/api/health && echo " – Kursbuch läuft."

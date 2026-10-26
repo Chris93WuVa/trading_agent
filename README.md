@@ -32,7 +32,7 @@ Hell- und Dunkelmodus, auch für Mobilgeräte.
 ## Architektur
 
 ```
-Browser ──HTTPS──▶ nginx/Apache (TLS) ──▶ uvicorn/FastAPI (127.0.0.1:8710)
+Browser ──HTTPS──▶ nginx (TLS)          ──▶ uvicorn/FastAPI (127.0.0.1:8710)
                                                 ├─ /api/*   REST, Login per Session-Cookie
                                                 ├─ /        Frontend (HTML/CSS/JS, ohne Build)
                                                 ├─ SQLite   Sammlung & Positionen
@@ -42,48 +42,29 @@ Browser ──HTTPS──▶ nginx/Apache (TLS) ──▶ uvicorn/FastAPI (127.0
 * `backend/app/` – FastAPI-App, Analytik, Signal, Provider (Yahoo / Demo), SQLite
 * `frontend/` – Single-Page-App ohne Abhängigkeiten; Schriften selbst gehostet
   (Instrument Sans/Serif, IBM Plex Mono, SIL OFL), keine Verbindungen zu Drittanbietern
-* `deploy/` – Installer, Update-Skript, systemd-Unit, nginx- und Apache-Vorlage
+* `deploy/` – Vorlagen für systemd, nginx und fail2ban (manuelle Einrichtung)
 
 **Sicherheit:** Passwort als scrypt-Hash, signiertes HttpOnly-/Secure-/SameSite-Strict-Cookie,
 Login-Drosselung (App + nginx), CSRF-Header für schreibende Aufrufe, strikte
 Content-Security-Policy, systemd-Sandboxing.
 
-## Installation auf dem Hostinger-VPS (Ubuntu)
+## Installation auf dem VPS
 
-Kursbuch läuft als eigener Dienst auf `127.0.0.1:8710` (von außen nicht erreichbar).
-Der vorhandene Webserver auf Port 80/443 nimmt Anfragen für die Subdomain entgegen und
-leitet sie weiter (Reverse-Proxy). Eine bestehende WordPress-Seite auf der Hauptdomain
-bleibt unverändert: Der Webserver unterscheidet die Seiten am angefragten Hostnamen.
+Kursbuch läuft als eigener Dienst auf `127.0.0.1:8710` und ist von außen nicht direkt
+erreichbar. Der vorhandene nginx nimmt Anfragen für die Subdomain entgegen und leitet
+sie weiter (Reverse-Proxy). Die WordPress-Seite auf der Hauptdomain bleibt unverändert,
+denn nginx unterscheidet die Seiten am angefragten Hostnamen.
 
-1. **DNS:** Im Hostinger-Panel (Domains → DNS-Zone) einen `A`-Record
-   `dashboard` → IP deines VPS anlegen (bei IPv6 zusätzlich `AAAA`). Prüfen:
-   `dig +short dashboard.EIGENE-DOMAIN.de`
-2. **Per SSH einloggen** und Repository holen:
-   ```bash
-   ssh root@<VPS-IP>
-   git clone https://github.com/Chris93WuVa/trading_agent.git
-   cd trading_agent
-   ```
-3. **Installer starten** (fragt das Dashboard-Passwort ab, mind. 10 Zeichen):
-   ```bash
-   sudo bash deploy/install.sh dashboard.EIGENE-DOMAIN.de deine@mail.de
-   ```
-   Der Installer erkennt, ob auf Port 80 **nginx** oder **Apache** läuft, legt dort einen
-   zusätzlichen virtuellen Host nur für die Subdomain an und holt per certbot ein
-   Let's-Encrypt-Zertifikat (Verlängerung automatisch über den certbot-Timer). Läuft
-   ein anderer Webserver (z. B. OpenLiteSpeed/CyberPanel), bricht er ab, bevor etwas
-   verändert wird. Dann im Panel einen Reverse-Proxy `dashboard.…` → `http://127.0.0.1:8710`
-   anlegen und den Installer mit `SKIP_WEB=1` erneut starten.
-4. Fertig: `https://dashboard.EIGENE-DOMAIN.de`
+Es gibt **kein Installationsskript**. Alle Schritte führst du selbst aus; jeder ist
+mit seinen Auswirkungen beschrieben in **[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)**:
+DNS bei Strato, Systembenutzer, Python-venv, systemd-Dienst, nginx-Site, Zertifikat
+per `certbot certonly --webroot` (ändert keine nginx-Dateien), optional fail2ban,
+Updates, Backup und Deinstallation.
 
-Vor der Installation prüfen, welcher Webserver läuft: `sudo ss -ltnp 'sport = :80'`.
-
-**Updates:** `cd ~/trading_agent && git pull && sudo bash deploy/update.sh`
-**Logs:** `journalctl -u kursbuch -f`
-**Passwort ändern:** `cd /opt/kursbuch/backend && sudo /opt/kursbuch/venv/bin/python -m app.auth`,
-Ausgabe in `/etc/kursbuch/kursbuch.env` bei `DASHBOARD_PASSWORD_HASH` eintragen,
-`sudo systemctl restart kursbuch`.
-**Backup:** `/var/lib/kursbuch/kursbuch.sqlite3` sichern.
+Vorlagen in `deploy/`:
+* `kursbuch.service` – systemd-Unit (uvicorn, Sandboxing)
+* `nginx-kursbuch.conf` – Server-Blöcke nur für die Subdomain (Port 80 → HTTPS, Port 443 → App)
+* `fail2ban-kursbuch.conf` – Filter und Jail für fehlgeschlagene Logins
 
 ## Lokal entwickeln
 
